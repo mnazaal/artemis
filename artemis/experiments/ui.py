@@ -48,14 +48,14 @@ except ImportError:
     raise ImportError("Failed to import the enum package. This was added in python 3.4 but backported back to 2.4.  To install, run 'pip install --upgrade pip enum34'")
 
 
-def _warn_with_prompt(message= None, prompt = 'Press Enter to continue or q then Enter to quit', use_prompt=True):
+def _warn_with_prompt(quit_callback, message= None, prompt = 'Press Enter to continue or q then Enter to quit', use_prompt=True):
     if message:
         print(message)
     if use_prompt:
         resp = input('({}) >> '.format(prompt))
         out = resp.strip().lower()
         if out=='q':
-            quit()
+            quit_callback()
         else:
             return out
 
@@ -294,7 +294,7 @@ experiment records.  You can specify records in the following ways:
                     try:
                         self.exp_record_dict = self._filter_record_dict(all_experiments, sortkey=self._sortkey)
                     except RecordSelectionError as err:
-                        _warn_with_prompt(str(err), use_prompt=self.catch_selection_errors)
+                        _warn_with_prompt(self.quit, str(err), use_prompt=self.catch_selection_errors)
                         if not self.catch_selection_errors:
                             raise
                         else:
@@ -512,11 +512,11 @@ experiment records.  You can specify records in the following ways:
                 display_results=args.display_results
                 )
 
-        result = _warn_with_prompt('Finished running {} experiment{}.'.format(len(ids), '' if len(ids)==1 else 's'),
+        result = _warn_with_prompt(self.quit, 'Finished running {} experiment{}.'.format(len(ids), '' if len(ids)==1 else 's'),
                 use_prompt=not self.close_after,
                 prompt='Press Enter to Continue, or "q" then Enter to Quit')
         if result=='q':
-            quit()
+            self.quit()
 
     def argsort(self, *args):
 

@@ -408,7 +408,8 @@ def interpret_numbers(user_range):
         interpret_numbers('4,6-9')==[4,6,7,8,9]
     :return: A list of integers, or None if the input is not numberic
     """
-    if all(d in '0123456789-,' for d in user_range):
+    first, last = user_range[0], user_range[-1]
+    if all(d in '0123456789-,' for d in user_range) and first!='-' and last!='-':
         numbers_and_ranges = user_range.split(',')
         numbers = [n for lst in [[int(s)] if '-' not in s else range(int(s[:s.index('-')]), int(s[s.index('-')+1:])+1) for s in numbers_and_ranges] for n in lst]
         return numbers
