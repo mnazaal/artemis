@@ -48,16 +48,17 @@ except ImportError:
     raise ImportError("Failed to import the enum package. This was added in python 3.4 but backported back to 2.4.  To install, run 'pip install --upgrade pip enum34'")
 
 
-def _warn_with_prompt(quit_callback, message= None, prompt = 'Press Enter to continue or q then Enter to quit', use_prompt=True):
-    if message:
-        print(message)
-    if use_prompt:
-        resp = input('({}) >> '.format(prompt))
-        out = resp.strip().lower()
-        if out=='q':
-            quit_callback()
-        else:
-            return out
+class Warnings(object):
+    def warn_with_prompt(self, message= None, prompt = 'Press Enter to continue or q then Enter to quit', use_prompt=True):
+        if message:
+            print(message)
+        if use_prompt:
+            resp = input('({}) >> '.format(prompt))
+            out = resp.strip().lower()
+            if out=='q':
+                self.quit()
+            else:
+                return out
 
 
 def browse_experiments(experiments = None, command=None, **kwargs):
@@ -81,7 +82,7 @@ def browse_experiments(experiments = None, command=None, **kwargs):
     browser.launch(command=command)
 
 
-class ExperimentBrowser(object):
+class ExperimentBrowser(Warnings):
 
     QUIT = 'Quit'
     REFRESH = 'Refresh'
@@ -193,6 +194,7 @@ experiment records.  You can specify records in the following ways:
         :param sortkey: A key function to use for sorting experiments.  It takes experiment name and returns an object to
             be used by the sorter.
         """
+        super(ExperimentBrowser, self).__init__()
 
         if run_args is None:
             run_args = {}
@@ -294,7 +296,7 @@ experiment records.  You can specify records in the following ways:
                     try:
                         self.exp_record_dict = self._filter_record_dict(all_experiments, sortkey=self._sortkey)
                     except RecordSelectionError as err:
-                        _warn_with_prompt(self.quit, str(err), use_prompt=self.catch_selection_errors)
+                        self.warn_with_prompt(str(err), use_prompt=self.catch_selection_errors)
                         if not self.catch_selection_errors:
                             raise
                         else:
@@ -512,7 +514,7 @@ experiment records.  You can specify records in the following ways:
                 display_results=args.display_results
                 )
 
-        result = _warn_with_prompt(self.quit, 'Finished running {} experiment{}.'.format(len(ids), '' if len(ids)==1 else 's'),
+        result = self.warn_with_prompt('Finished running {} experiment{}.'.format(len(ids), '' if len(ids)==1 else 's'),
                 use_prompt=not self.close_after,
                 prompt='Press Enter to Continue, or "q" then Enter to Quit')
         if result=='q':
@@ -548,7 +550,7 @@ experiment records.  You can specify records in the following ways:
             load_experiment(experiment_identifier).test()
 
     def help(self):
-        _warn_with_prompt(self.HELP_TEXT, prompt = 'Press Enter to exit help.', use_prompt=not self.close_after)
+        self.warn_with_prompt(self.HELP_TEXT, prompt = 'Press Enter to exit help.', use_prompt=not self.close_after)
 
     def show(self, *args):
         """
@@ -575,7 +577,7 @@ experiment records.  You can specify records in the following ways:
             Process(target=partial(show_multiple_records, records, func)).start()
         else:
             show_multiple_records(records, func)
-        _warn_with_prompt(use_prompt=False)
+        self.warn_with_prompt(use_prompt=False)
 
     def info(self, *args):
         parser = argparse.ArgumentParser()
@@ -641,7 +643,7 @@ experiment records.  You can specify records in the following ways:
         # thread.join()
 
         func(records)
-        _warn_with_prompt(use_prompt=False)
+        self.warn_with_prompt(use_prompt=False)
 
     def displayformat(self, new_format):
         assert new_format in ('nested', 'flat', 'args'), "Display format must be 'nested' or 'flat' or 'args', not '{}'".format(new_format)
@@ -654,7 +656,7 @@ experiment records.  You can specify records in the following ways:
             for record in records:
                 with IndentPrint(record.get_id(), show_line=True):
                     print(record.get_error_trace())
-        _warn_with_prompt(use_prompt=False)
+        self.warn_with_prompt(use_prompt=False)
 
     def delete(self, user_range):
         records = select_experiment_records(user_range, self.exp_record_dict, flat=True)
@@ -667,7 +669,7 @@ experiment records.  You can specify records in the following ways:
             print('Records deleted.')
             return ExperimentBrowser.REFRESH
         else:
-            _warn_with_prompt('Records were not deleted.', use_prompt=False)
+            self.warn_with_prompt('Records were not deleted.', use_prompt=False)
 
     def call(self, user_range):
         ids = select_experiments(user_range, self.exp_record_dict)
@@ -678,18 +680,18 @@ experiment records.  You can specify records in the following ways:
         exps_to_records = select_experiments(user_range, self.exp_record_dict, return_dict=True)
         with IndentPrint():
             print(self.get_experiment_list_str(exps_to_records))
-        _warn_with_prompt('Experiment Selection "{}" includes {} out of {} experiments.'.format(user_range, len(exps_to_records), len(self.exp_record_dict)), use_prompt=not self.close_after)
+        self.warn_with_prompt('Experiment Selection "{}" includes {} out of {} experiments.'.format(user_range, len(exps_to_records), len(self.exp_record_dict)), use_prompt=not self.close_after)
 
     def selectrec(self, user_range):
         records = select_experiment_records(user_range, self.exp_record_dict, flat=True)
         with IndentPrint():
             print(ExperimentRecordBrowser.get_record_table(records))
-        _warn_with_prompt('Record Selection "{}" includes {} out of {} records.'.format(user_range, len(records), sum(len(recs) for recs in self.exp_record_dict.values())), use_prompt=not self.close_after)
+        self.warn_with_prompt('Record Selection "{}" includes {} out of {} records.'.format(user_range, len(records), sum(len(recs) for recs in self.exp_record_dict.values())), use_prompt=not self.close_after)
 
     def side_by_side(self, user_range):
         records = select_experiment_records(user_range, self.exp_record_dict, flat=True)
         print(side_by_side([get_record_full_string(rec) for rec in records], max_linewidth=128))
-        _warn_with_prompt(use_prompt=False)
+        self.warn_with_prompt(use_prompt=False)
 
     def argtable(self, *args):
         parser = argparse.ArgumentParser()
@@ -701,7 +703,7 @@ experiment records.  You can specify records in the following ways:
         TableExplorerUI(table_data=rows, col_headers=headers).launch()
 
         # print(get_exportiment_record_arg_result_table(records))
-        _warn_with_prompt(use_prompt=False)
+        self.warn_with_prompt(use_prompt=False)
 
     def argcompare(self, *args):
         parser = argparse.ArgumentParser()
@@ -709,7 +711,7 @@ experiment records.  You can specify records in the following ways:
         args = parser.parse_args(args)
         records = select_experiment_records(args.user_range, self.exp_record_dict, flat=True)
         print_experiment_record_argtable(records)
-        _warn_with_prompt(use_prompt=False)
+        self.warn_with_prompt(use_prompt=False)
 
     def records(self, ):
         browse_experiment_records(self.exp_record_dict.keys())
@@ -754,7 +756,7 @@ experiment records.  You can specify records in the following ways:
             print('Experiments killed.')
             return ExperimentBrowser.REFRESH
         else:
-            _warn_with_prompt('Experiments were not killed.', use_prompt=False)
+            self.warn_with_prompt('Experiments were not killed.', use_prompt=False)
 
     def filter(self, user_range):
         self._filter = user_range if user_range not in ('-', '--clear') else None
@@ -770,7 +772,7 @@ experiment records.  You can specify records in the following ways:
 
     def explist(self, surround = ""):
         print("\n".join([surround+k+surround for k in self.exp_record_dict.keys()]))
-        _warn_with_prompt(use_prompt=False)
+        self.warn_with_prompt(use_prompt=False)
 
     def quit(self):
         return ExperimentBrowser.QUIT
@@ -895,7 +897,7 @@ def browse_experiment_records(*args, **kwargs):
     experiment_record_browser.launch()
 
 
-class ExperimentRecordBrowser(object):
+class ExperimentRecordBrowser(Warnings):
 
     QUIT = 'Quit'
     HELP_TEXT = """
@@ -918,6 +920,8 @@ class ExperimentRecordBrowser(object):
         :param filter_text: Filter by regular expression
         :return:
         """
+        super(ExperimentRecordBrowser, self).__init__()
+
         self.experiment_names = experiment_names
         self.filters = [filter_text]
         self.record_ids = self.reload_ids()
@@ -994,7 +998,7 @@ class ExperimentRecordBrowser(object):
 
             try:
                 if cmd not in func_lookup:
-                    raise _warn_with_prompt('Unknown Command: {}'.format(cmd))
+                    raise self.warn_with_prompt('Unknown Command: {}'.format(cmd))
                 else:
                     return_val = func_lookup[cmd](*args)
                     if return_val==self.QUIT:
@@ -1011,7 +1015,7 @@ class ExperimentRecordBrowser(object):
         return self.QUIT
 
     def help(self):
-        _warn_with_prompt(self.HELP_TEXT)
+        self.warn_with_prompt(self.HELP_TEXT)
 
     def filter(self, filter_text):
         self.filters.append(filter_text)
@@ -1030,22 +1034,22 @@ class ExperimentRecordBrowser(object):
         self.record_ids = self.reload_ids()
 
     def viewfilters(self):
-        _warn_with_prompt('Filtering for: \n  Names in {}\n  Expressions: {}'.format(self.experiment_names, self.filters))
+        self.warn_with_prompt('Filtering for: \n  Names in {}\n  Expressions: {}'.format(self.experiment_names, self.filters))
 
     def compare(self, user_range):
         identifiers = self._select_records(user_range)
         print_experiment_record_argtable(identifiers)
-        _warn_with_prompt('')
+        self.warn_with_prompt('')
 
     def show(self, user_range):
         record_ids = self._select_records(user_range)
         show_multiple_records([load_experiment_record(rid) for rid in record_ids])
-        _warn_with_prompt('')
+        self.warn_with_prompt('')
 
     def search(self, filter_text):
         print('Found the following Records: ')
         print(self.get_record_table([rid for rid in self.record_ids if filter_text in rid]))
-        _warn_with_prompt()
+        self.warn_with_prompt()
 
     def delete(self, user_range):
         ids = self._select_records(user_range)
@@ -1055,7 +1059,7 @@ class ExperimentRecordBrowser(object):
         if conf.strip().lower() == 'yes':
             clear_experiment_records(ids=ids)
         else:
-            _warn_with_prompt("Did not delete experiments")
+            self.warn_with_prompt("Did not delete experiments")
         self.record_ids = self.reload_ids()
 
 
